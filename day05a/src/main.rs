@@ -1,56 +1,80 @@
 use std::{fs::File, io::{BufReader, BufRead}};
 
+
 fn main()  {
     let file = File::open("input.txt").unwrap();
     let mut lines = BufReader::new(file).lines();
 
-    let mut rows: Vec<Vec<Option<char>>> = vec![vec![]; 9];
-    let mut row = 0;
+    let mut rows: Vec<Vec<char>> = vec![vec![]; 9];
 
     while let Some(line) = lines.next() {
         let line = line.unwrap();
-        if line.is_empty() { break }
+        if line.chars().nth(1).unwrap() == '1' {
+            lines.next();
+            break
+        }
         
         let mut offset = 0;
+        let mut index = 0;
         loop {
             let start = offset;
             let end = 3 + offset;
             if end > line.len() {
-                row+=1;
                 break;
             }
             let mut current_crate = line[start..end].chars();
             let crate_is_empty = current_crate.all(|x| x == ' ');
 
-            if crate_is_empty {
-                rows[row].push(None);
-            }
-            else {
+            if !crate_is_empty {
                 let prased = current_crate.nth(0).unwrap();
-                rows[row].push(Some(prased));
+                rows[index].push(prased);
             }
-
+            index +=1;
             offset +=4;
         }
     }
 
-//    rows.iter_mut().for_each(|x| x.reverse());
-
-    for row in rows {
-        for column in row {
-            match column {
-                Some(x) => print!("[{}] ", x),
-                None => print!("    "),
-            }
-        }
+    rows.iter().for_each(|row| {
+        row.iter().for_each(|column| {
+            print!("[{}] ", column)
+        });
         println!(" ")
-    }
+    });
+
+    rows.iter_mut().for_each(|x| x.reverse());
+    println!();
 
     while let Some(line) = lines.next() {
         let line = line.unwrap();
+        if line.is_empty() { break }
+        let mut split = line.split(' ');
+        split.next();
+        let move_count = split.next().unwrap().parse::<usize>().unwrap();
+        split.next();
+        let from_pos = split.next().unwrap().parse::<usize>().unwrap() - 1;
+        split.next();
+        let to_pos = split.next().unwrap().parse::<usize>().unwrap() - 1;
 
+        let mut i: usize = 0;
+        while i < move_count {
+            let top_crate_val = rows[from_pos][rows[from_pos].len()-1];
+            rows[to_pos].push(top_crate_val);
+            rows[from_pos].pop();
+            //println!("moving {} from {} to {}", move_count, from_pos, to_pos);
+            i+=1;
+        }
     }
 
-    // println!("{}", num);
+    rows.iter().for_each(|row| {
+        row.iter().for_each(|column| {
+            print!("[{}] ", column)
+        });
+        println!(" ")
+    });
+
+    println!();
+    rows.iter().for_each(|x| print!("{}", x.iter().last().unwrap()));
+    println!();
+
 
 }
