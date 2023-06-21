@@ -23,13 +23,43 @@ impl Tree {
         self.parents.push(parent);
         let node_idx = self.nodes.len();
         match &mut self.nodes[parent] {
-            Node::Folder { name, children } => children.push(node_idx),
-            Node::File { name, size } => (),
+            Node::Folder { name: _, children } => { 
+                // println!("adding child {}", node_idx);
+                children.push(node_idx)},
+            Node::File { name: _, size: _ } => (),
         }
         node_idx
     }
     pub fn get_parent(&self, node: usize) -> usize {
         self.parents[node]
+    }
+    pub fn get_children(&self, folder: usize) -> Vec<usize> {
+        match &self.nodes[folder] {
+            Node::Folder { name: _, children } => children.to_vec(),
+            Node::File { name: _, size: _ } => vec![],
+        }
+    }
+    pub fn get_folder(&self, parent: usize, folder_name: &str) -> Option<usize> {
+        let children = self.get_children(parent);
+        let mut children = children.iter();
+        println!("{:?}", children);
+        assert_eq!(self.nodes.len(), self.parents.len());
+        loop {
+            let idx = children.next();
+            match idx {
+                Some(idx) => {
+                    match &self.nodes[*idx] {
+                        Node::Folder { name, children } => {
+                            if *name == folder_name {
+                                return Some(*idx);
+                            }
+                        },
+                        Node::File { name, size } => return None,
+                    }
+                },
+                None => return None,
+            }
+        }
     }
 }
 impl Node {
@@ -41,7 +71,7 @@ impl Node {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Eq, PartialEq)]
 enum TokenKind {
     Ls,
     Cd(String),
@@ -55,49 +85,51 @@ fn main()  {
     let mut tree = Tree { nodes: vec![], parents: vec![] };
     let root = Node::new_folder("/");
     let root = tree.insert(root, 0);
-    let current_folder = root;
+    let mut current_folder = root;
 
     let mut token = TokenKind::None;
     while let Some(line) = lines.next() {
         let line = line.unwrap();
-        // let mut chars = line.chars();
         let mut split = line.split(' ');
         let first_arg = split.next().unwrap();
         
-        // println!("{:?}", token);
-        
-        if first_arg == "$"
+        if first_arg.bytes().nth(0).unwrap() == b'$'
         {
             let command_type = split.next().unwrap();
-
             match command_type {
-                "ls" => { token = TokenKind::Ls; continue }
-                "cd" =>  { token = TokenKind::Cd(split.next().unwrap().to_owned()); continue },
+                "cd" => token = TokenKind::Cd(split.next().unwrap().to_owned()),
+                "ls" => { token = TokenKind::Ls; continue },
                 _ => ()
             }
         }
+
+        // println!("tk {:#?}", token);
 
         match token {
             TokenKind::Ls => {
                 if first_arg == "dir" {
                     let folder = Node::new_folder(split.next().unwrap());
-                    let root = tree.insert(folder, current_folder);
+                    tree.insert(folder, current_folder);
                 }
                 else {
-                    let size = split.next().unwrap().parse::<i32>().unwrap();
-                    current_folder.add_file(SystemFile::new(split.next().unwrap().to_owned(), size));
+                    let size = first_arg.parse::<i32>().unwrap();
+                    let file = Node::new_file(split.next().unwrap(), size);
+                    tree.insert(file, current_folder);
                 }
-                continue;
             }
-            TokenKind::Cd(path) => {
+            TokenKind::Cd(ref path) => {
                 if path == ".." {
-                    current_folder = current_folder.get_parent();
+                    current_folder = tree.get_parent(current_folder);
+                    // println!("changing path .. {}", current_folder);
                 }
                 else if path == "/" {
-                    current_folder = &mut root;
+                    // println!("resetting path /");
+                    current_folder = 0;
                 }
-                else {
-                    current_folder = &mut current_folder.get_folder(path);
+                else { // cd path
+                    current_folder = tree.get_folder(current_folder, path.as_str()).unwrap();
+                    // println!("changing path {}", current_folder);
+
                 }
             },
             TokenKind::None => ()
@@ -106,5 +138,5 @@ fn main()  {
 
     }
 
-    println!("{:#?}", tree);
+    // println!("{:#?}", tree);
 }
