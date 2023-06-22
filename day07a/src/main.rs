@@ -19,15 +19,22 @@ struct Tree {
 }
 impl Tree {
     pub fn insert(&mut self, node: Node, parent: usize) -> usize {
+        let child_name = node.get_name().to_owned();
+        let node_type = match node {
+            Node::Folder { name: _, children: _ } => "folder",
+            Node::File { name: _, size: _ } => "file",
+        };
+        let node_idx = self.nodes.len();
         self.nodes.push(node);
         self.parents.push(parent);
-        let node_idx = self.nodes.len();
+        assert_eq!(self.nodes.len(), self.parents.len());
         match &mut self.nodes[parent] {
-            Node::Folder { name: _, children } => { 
-                // println!("adding child {}", node_idx);
+            Node::Folder { name, children } => { 
+                //println!("added to \"{}\" new {} \"{}\", at {}", name, node_type, child_name, node_idx);
                 children.push(node_idx)},
             Node::File { name: _, size: _ } => (),
         }
+
         node_idx
     }
     pub fn get_parent(&self, node: usize) -> usize {
@@ -42,19 +49,19 @@ impl Tree {
     pub fn get_folder(&self, parent: usize, folder_name: &str) -> Option<usize> {
         let children = self.get_children(parent);
         let mut children = children.iter();
-        println!("{:?}", children);
-        assert_eq!(self.nodes.len(), self.parents.len());
+        //println!("Searching for folder {} in \"{}\" : {:?}", folder_name, &self.nodes[parent].get_name(), children);
         loop {
             let idx = children.next();
             match idx {
                 Some(idx) => {
                     match &self.nodes[*idx] {
-                        Node::Folder { name, children } => {
+                        Node::Folder { name, children: _ } => {
+                            //println!("search checking {} at {}", name, idx);
                             if *name == folder_name {
                                 return Some(*idx);
                             }
                         },
-                        Node::File { name, size } => return None,
+                        Node::File { name: _, size: _ } => continue,
                     }
                 },
                 None => return None,
@@ -68,6 +75,12 @@ impl Node {
     }
     pub fn new_file(name: &str, size: i32) -> Self {
         Node::File { name: String::from(name), size }
+    }
+    pub fn get_name(&self) -> &String {
+        match self {
+            Node::Folder { name, children: _ } => name,
+            Node::File { name, size: _ } => name,
+        }
     }
 }
 
@@ -138,5 +151,5 @@ fn main()  {
 
     }
 
-    // println!("{:#?}", tree);
+    println!("{:#?}", tree);
 }
