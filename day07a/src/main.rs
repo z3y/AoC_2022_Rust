@@ -70,11 +70,11 @@ impl Tree {
         }
     }
     pub fn get_size(&self, node: usize) -> i32 {
+        if node == 0 { return 0; } // the root contains itself xd
         let mut total_size: i32 = 0;
         match &self.nodes[node] {
             Node::Folder { name: _, children } => {
                 for i in children {
-                    if *i == 0 { continue; } // the root contains itself xd
                     total_size += self.get_size(*i);
                 }
             },
@@ -156,6 +156,20 @@ fn main()  {
             TokenKind::None => ()
         }
     }
-
-    println!("{:#?}", tree.get_size(0));
+    let mut sum = 0;
+    let mut i = 1;
+    while i < tree.nodes.len() {
+        match tree.nodes[i] {
+            Node::Folder { name: _, children: _ } => {
+                let size = tree.get_size(i);
+                if size < 100000 {
+                    sum += size;
+                }
+ 
+            },
+            Node::File { name: _, size: _ } => (),
+        }
+        i+=1;
+    }
+    println!("{}", sum);
 }
