@@ -4,7 +4,7 @@ use std::{fs::File, io::{BufReader, BufRead}};
 enum Node {
     Folder {
         name: String,
-        children: Vec<usize>
+        children: Vec<usize>,
     },
     File {
         name: String,
@@ -17,6 +17,7 @@ struct Tree {
     nodes: Vec<Node>,
     parents: Vec<usize>,
 }
+
 impl Tree {
     pub fn insert(&mut self, node: Node, parent: usize) -> usize {
         let child_name = node.get_name().to_owned();
@@ -68,6 +69,19 @@ impl Tree {
             }
         }
     }
+    pub fn get_size(&self, node: usize) -> i32 {
+        let mut total_size: i32 = 0;
+        match &self.nodes[node] {
+            Node::Folder { name: _, children } => {
+                for i in children {
+                    if *i == 0 { continue; } // the root contains itself xd
+                    total_size += self.get_size(*i);
+                }
+            },
+            Node::File { name: _, size } => total_size += size,
+        }
+        total_size
+    }
 }
 impl Node {
     pub fn new_folder(name: &str) -> Self {
@@ -116,8 +130,6 @@ fn main()  {
             }
         }
 
-        // println!("tk {:#?}", token);
-
         match token {
             TokenKind::Ls => {
                 if first_arg == "dir" {
@@ -133,23 +145,17 @@ fn main()  {
             TokenKind::Cd(ref path) => {
                 if path == ".." {
                     current_folder = tree.get_parent(current_folder);
-                    // println!("changing path .. {}", current_folder);
                 }
                 else if path == "/" {
-                    // println!("resetting path /");
                     current_folder = 0;
                 }
                 else { // cd path
                     current_folder = tree.get_folder(current_folder, path.as_str()).unwrap();
-                    // println!("changing path {}", current_folder);
-
                 }
             },
             TokenKind::None => ()
         }
-
-
     }
 
-    println!("{:#?}", tree);
+    println!("{:#?}", tree.get_size(0));
 }
